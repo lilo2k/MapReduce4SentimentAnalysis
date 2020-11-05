@@ -2,10 +2,10 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Run with fixed arguments",
+            "name": "Word count",
             "request": "launch",
-            "mainClass": "",
-            "args": "input.txt output"
+            "mainClass": "myproject.WordCount",
+            "args": "./wordlist/pos-words.txt output test1 test2"
         },
         {
             "type": "java",
@@ -13,6 +13,20 @@
             "request": "launch",
             "mainClass": "myproject.SentimentWordCount",
             "args": "./input/input3.txt output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
+        },
+        {
+            "type": "java",
+            "name": "Sentiment-sahkespeare",
+            "request": "launch",
+            "mainClass": "myproject.SentimentWordCount",
+            "args": "./shakespeare/histories.txt output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
+        },
+        {
+            "type": "java",
+            "name": "sentiment-twitter",
+            "request": "launch",
+            "mainClass": "myproject.SentimentWordCount",
+            "args": "./input/twitter-large2.csv output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
         }
     ]
 }

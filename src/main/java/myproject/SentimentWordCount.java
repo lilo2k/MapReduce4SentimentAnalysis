@@ -23,8 +23,11 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
 
 public class SentimentWordCount {
+    private static final Logger LOG = Logger.getLogger(SentimentWordCount.class);
     /**
      *
      */
@@ -46,7 +49,7 @@ public class SentimentWordCount {
      */
     private static final String NON_ALPHABET = "[^a-zA-Z]";
 
-    private static final String BRAND = "Alice";
+    private static final String BRAND = "mcdonalds";
 
     private static Set<String> goodWords = new HashSet<String>();
     private static Set<String> badWords = new HashSet<String>();
@@ -56,11 +59,11 @@ public class SentimentWordCount {
     // IntWritable = Output Value = 1 Always <in this case> 1 . for each word
     public static class TokenizeMapper extends Mapper<Object, Text, Text, IntWritable> {
 
-        @Override
-        protected void setup(Mapper<Object, Text, Text, IntWritable>.Context context)
-                throws IOException, InterruptedException {
-            super.setup(context);
-        }
+        // @Override
+        // protected void setup(Mapper<Object, Text, Text, IntWritable>.Context context)
+        //         throws IOException, InterruptedException {
+        //     super.setup(context);
+        // }
 
         @Override
         // we are getting a line of text at a time as input
@@ -81,9 +84,26 @@ public class SentimentWordCount {
 
             while (stringTokenizer.hasMoreTokens()) {
                 // removes all non alphabets, and any special characters
-                keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET, ""));
+                // keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET, ""));
+                String word = stringTokenizer.nextToken().toLowerCase();//.replaceAll(NON_ALPHABET, "");
 
-                context.write(keyWord, valueOne);
+                // Filter and count "good" words.
+                if (goodWords.contains(word)) {
+                    // context.getCounter(Gauge.POSITIVE).increment(1);
+                    System.out.println(word);
+                    LOG.info("Word: " + word);
+                    keyWord.set("positive");
+                    context.write(keyWord, valueOne);
+                }
+
+                // Filter and count "bad" words.
+                if (badWords.contains(word)) {
+                    // context.getCounter(Gauge.NEGATIVE).increment(1);
+                    System.out.println(word);
+                    LOG.info("Word: " + word);
+                    keyWord.set("negative");
+                    context.write(keyWord, valueOne);
+                }
             }
         }
     }
@@ -95,7 +115,7 @@ public class SentimentWordCount {
         // System automatically shuffle-sorts, and gives a iterable list as value to
         // this reducer function.
         // e.g. ("hello",1,1,1,1) hello is key, and 1,1,1,1 is iterable list
-        public void reduce(Text term, Iterable<IntWritable> listOfOnes, Context contextWriteAggregateOutput)
+        public void reduce(Text term, Iterable<IntWritable> listOfOnes, Context context)
                 throws IOException, InterruptedException {
             int count = 0;
 
@@ -103,23 +123,23 @@ public class SentimentWordCount {
                 count++;
             }
             IntWritable output = new IntWritable(count);
-            contextWriteAggregateOutput.write(term, output);
+            context.write(term, output);
         }
     }
 
     // main
     public static void main(String... args) throws IOException, ClassNotFoundException, InterruptedException {
         // System.out.println( "Hello World!" );
-
+        BasicConfigurator.configure();
+        
         Configuration conf = new Configuration();
 
-        // String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+        String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
 
-        // if (otherArgs.length != 4) {
-        // System.err.println("* * * Needs more arguments....usage : WordCount <input
-        // file> <output folder> <good word list> <bad word list>");
-        // System.exit(2);
-        // }
+        if (otherArgs.length != 4) {
+        System.err.println("* * * Needs more arguments....usage : WordCount <inputfile> <output folder> <good word list> <bad word list>");
+        System.exit(2);
+        }
 
         parsePositive(args[2]);
         parseNegative(args[3]);
@@ -142,6 +162,7 @@ public class SentimentWordCount {
 
         String outputFolderName = createOutputFolderName(args[1]);
         FileOutputFormat.setOutputPath(job, new Path(outputFolderName));
+        // FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
         boolean isSuccess_JobStatus = job.waitForCompletion(true); // submits the job
 

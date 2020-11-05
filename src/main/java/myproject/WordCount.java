@@ -16,6 +16,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.log4j.BasicConfigurator;
 
 public class WordCount {
     /**
@@ -86,12 +87,13 @@ public class WordCount {
     // main
     public static void main(String ...args) throws IOException, ClassNotFoundException, InterruptedException {
         // System.out.println( "Hello World!" );
+        BasicConfigurator.configure();
 
         Configuration conf = new Configuration();
 
         String[] otherArgs = new GenericOptionsParser(conf,args).getRemainingArgs();
 		 
-		 if(otherArgs.length != 2)
+		 if(otherArgs.length < 2)
 		 {
 			 System.err.println("* * * Needs two arguments....usage : WordCount <input_file> <output_folder>");
 			 System.exit(2);
