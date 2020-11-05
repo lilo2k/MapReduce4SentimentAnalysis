@@ -26,7 +26,7 @@
             "name": "sentiment-twitter",
             "request": "launch",
             "mainClass": "myproject.SentimentWordCount",
-            "args": "./input/twitter-large2.csv output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
+            "args": "./input/twitter.csv output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
         }
     ]
 }
