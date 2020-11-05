@@ -12,7 +12,7 @@
             "name": "Sentiment - line filter by a brand",
             "request": "launch",
             "mainClass": "myproject.SentimentWordCount",
-            "args": "input3.txt output"
+            "args": "./input/input3.txt output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
         }
     ]
 }

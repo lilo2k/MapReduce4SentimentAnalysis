@@ -1,9 +1,10 @@
 # MapReduce4SentimentAnalysis
+How to build:
+mvn package
 
-Referred:
+How to run:
+java -cp ./target/MapReduceSample.jar mypackage.SentimentWordCount ./input/input.txt output
 
-https://github.com/vijay-khanna/aws-emr-demos
-
-and
-
-https://docs.cloudera.com
+Reference:
+- https://github.com/vijay-khanna/aws-emr-demos
+- https://docs.cloudera.com

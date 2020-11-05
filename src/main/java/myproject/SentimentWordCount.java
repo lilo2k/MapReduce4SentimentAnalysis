@@ -1,7 +1,12 @@
 package myproject;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.net.URI;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
@@ -17,6 +22,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.StringUtils;
 
 public class SentimentWordCount {
     /**
@@ -39,8 +45,11 @@ public class SentimentWordCount {
      *
      */
     private static final String NON_ALPHABET = "[^a-zA-Z]";
-    
+
     private static final String BRAND = "Alice";
+
+    private static Set<String> goodWords = new HashSet<String>();
+    private static Set<String> badWords = new HashSet<String>();
 
     // map
     // Object = Input Key, Text = input Value, Text = Output of Map Process,
@@ -48,14 +57,19 @@ public class SentimentWordCount {
     public static class TokenizeMapper extends Mapper<Object, Text, Text, IntWritable> {
 
         @Override
+        protected void setup(Mapper<Object, Text, Text, IntWritable>.Context context)
+                throws IOException, InterruptedException {
+            super.setup(context);
+        }
 
+        @Override
         // we are getting a line of text at a time as input
         // context is the way in which the key-value pairs is spit out.
-        public void map(Object inputKey, Text inputValue, Context context)
-                throws IOException, InterruptedException {
+        public void map(Object inputKey, Text inputValue, Context context) throws IOException, InterruptedException {
 
             // pick up lines related to the BRAND
-            if (!Pattern.compile(Pattern.quote(BRAND), Pattern.CASE_INSENSITIVE).matcher(inputValue.toString()).find()) {
+            if (!Pattern.compile(Pattern.quote(BRAND), Pattern.CASE_INSENSITIVE).matcher(inputValue.toString())
+                    .find()) {
                 return;
             }
 
@@ -99,12 +113,16 @@ public class SentimentWordCount {
 
         Configuration conf = new Configuration();
 
-        String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+        // String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
 
-        if (otherArgs.length != 2) {
-            System.err.println("* * * Needs two arguments....usage : WordCount <input_file> <output_folder>");
-            System.exit(2);
-        }
+        // if (otherArgs.length != 4) {
+        // System.err.println("* * * Needs more arguments....usage : WordCount <input
+        // file> <output folder> <good word list> <bad word list>");
+        // System.exit(2);
+        // }
+
+        parsePositive(args[2]);
+        parseNegative(args[3]);
 
         Job job = Job.getInstance(conf, WORD_COUNT);
         job.setJarByClass(SentimentWordCount.class);
@@ -125,19 +143,17 @@ public class SentimentWordCount {
         String outputFolderName = createOutputFolderName(args[1]);
         FileOutputFormat.setOutputPath(job, new Path(outputFolderName));
 
-        boolean isSuccess_JobStatus = job.waitForCompletion(true); // submits the job 
-		
-		if(isSuccess_JobStatus) {
-			System.exit(0); // Exit with Success code	
-			System.out.println(COMPLETED_THE_MAP_REDUCE_SUCCESSFULLY);
-		}
-		else
-		{
-			System.exit(1); // Exit with Failure code # 1
-			System.out.println(EXITED_WITH_ERRORS);
-		}
-		
-		System.out.println(COMPLETED_THE_MAP_REDUCE);
+        boolean isSuccess_JobStatus = job.waitForCompletion(true); // submits the job
+
+        if (isSuccess_JobStatus) {
+            System.exit(0); // Exit with Success code
+            System.out.println(COMPLETED_THE_MAP_REDUCE_SUCCESSFULLY);
+        } else {
+            System.exit(1); // Exit with Failure code # 1
+            System.out.println(EXITED_WITH_ERRORS);
+        }
+
+        System.out.println(COMPLETED_THE_MAP_REDUCE);
 
     }
 
@@ -145,8 +161,36 @@ public class SentimentWordCount {
 
         File file = new File(folderName);
         if (file.exists()) {
-            return createOutputFolderName(folderName+"1");
+            return createOutputFolderName(folderName + "1");
         }
         return folderName;
+    }
+
+    // Parse the positive words to match and capture during Map phase.
+    private static void parsePositive(String goodWordsUri) {
+        try {
+            BufferedReader fis = new BufferedReader(new FileReader(new File(goodWordsUri)));
+            String goodWord;
+            while ((goodWord = fis.readLine()) != null) {
+                goodWords.add(goodWord);
+            }
+        } catch (IOException ioe) {
+            System.err.println("Caught exception parsing cached file '" + goodWords + "' : "
+                    + StringUtils.stringifyException(ioe));
+        }
+    }
+
+    // Parse the negative words to match and capture during Reduce phase.
+    private static void parseNegative(String badWordsUri) {
+        try {
+            BufferedReader fis = new BufferedReader(new FileReader(new File(badWordsUri)));
+            String badWord;
+            while ((badWord = fis.readLine()) != null) {
+                badWords.add(badWord);
+            }
+        } catch (IOException ioe) {
+            System.err.println("Caught exception while parsing cached file '" + badWords + "' : "
+                    + StringUtils.stringifyException(ioe));
+        }
     }
 }
