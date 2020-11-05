@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Run with fixed arguments",
+            "request": "launch",
+            "mainClass": "",
+            "args": "input.txt output"
+        },
+        {
+            "type": "java",
+            "name": "Sentiment - line filter by a brand",
+            "request": "launch",
+            "mainClass": "myproject.SentimentWordCount",
+            "args": "input3.txt output"
+        }
+    ]
+}
