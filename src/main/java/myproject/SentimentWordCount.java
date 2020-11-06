@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URL;
 import java.util.HashSet;
@@ -52,21 +54,90 @@ public class SentimentWordCount {
 
     private static final String BRAND = "mcdonalds";
 
-    private static Set<String> goodWords = new HashSet<String>();
-    private static Set<String> badWords = new HashSet<String>();
-
     private static final String POSITIVE = "positive";
+    /**
+    *
+    */
+    private static final String NEGATIVE = "negative";
+    /**
+     *
+     */
+    private static final String SI = "SI";
 
     // map
     // Object = Input Key, Text = input Value, Text = Output of Map Process,
     // IntWritable = Output Value = 1 Always <in this case> 1 . for each word
     public static class TokenizeMapper extends Mapper<Object, Text, Text, IntWritable> {
+        private static Set<String> goodWords = new HashSet<String>();
+        private static Set<String> badWords = new HashSet<String>();
 
-        // @Override
-        // protected void setup(Mapper<Object, Text, Text, IntWritable>.Context context)
-        // throws IOException, InterruptedException {
-        // super.setup(context);
-        // }
+        @Override
+        protected void setup(Mapper<Object, Text, Text, IntWritable>.Context context)
+                throws IOException, InterruptedException {
+            super.setup(context);
+
+            // parsePositive("pos-words.txt");
+            // System.out.println("parsePositive done");
+            // parseNegative("neg-words.txt");
+            // System.out.println("parseNegative done");
+
+            // URL url = this.getClass().getClassLoader().getResource("pos-words.txt");
+            // File file = new File(url.getPath());
+
+            InputStream in = getClass().getResourceAsStream("pos-words.txt"); 
+            BufferedReader fis = new BufferedReader(new InputStreamReader(in));
+            // BufferedReader fis = new BufferedReader(new FileReader(file));
+            String goodWord;
+            while ((goodWord = fis.readLine()) != null) {
+                goodWords.add(goodWord);
+            }
+            fis.close();
+
+            in = getClass().getResourceAsStream("neg-words.txt"); 
+            fis = new BufferedReader(new InputStreamReader(in));
+            // url = this.getClass().getClassLoader().getResource("neg-words.txt");
+            // file = new File(url.getPath());
+            // fis = new BufferedReader(new FileReader(file));
+            String badWord;
+            while ((badWord = fis.readLine()) != null) {
+                badWords.add(badWord);
+            }
+            fis.close();
+        }
+
+        // Parse the positive words to match and capture during Map phase.
+        private static void parsePositive(String goodWordsUri) {
+            try {
+                URL url = SentimentWordCount.class.getResource(goodWordsUri);
+                File file = new File(url.getPath());
+                BufferedReader fis = new BufferedReader(new FileReader(file));
+                String goodWord;
+                while ((goodWord = fis.readLine()) != null) {
+                    goodWords.add(goodWord);
+                }
+                fis.close();
+            } catch (IOException ioe) {
+                System.err.println("Caught exception parsing cached file '" + goodWords + "' : "
+                        + StringUtils.stringifyException(ioe));
+            }
+        }
+
+        // Parse the negative words to match and capture during Reduce phase.
+        private static void parseNegative(String badWordsUri) {
+            try {
+                URL url = SentimentWordCount.class.getResource(badWordsUri);
+                File file = new File(url.getPath());
+                BufferedReader fis = new BufferedReader(new FileReader(file));
+                String badWord;
+                while ((badWord = fis.readLine()) != null) {
+                    badWords.add(badWord);
+                }
+                fis.close();
+            } catch (IOException ioe) {
+                System.err.println("Caught exception while parsing cached file '" + badWords + "' : "
+                        + StringUtils.stringifyException(ioe));
+            }
+        }
 
         /**
          *
@@ -93,9 +164,11 @@ public class SentimentWordCount {
 
             while (stringTokenizer.hasMoreTokens()) {
                 // removes all non alphabets, and any special characters
-                // keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET,
-                // ""));
-                String word = stringTokenizer.nextToken().toLowerCase();// .replaceAll(NON_ALPHABET, "");
+
+                // keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET,"") + goodWords.size());
+                // context.write(keyWord, valueOne);
+
+                String word = stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET, "");
 
                 // Filter and count "good" words.
                 if (goodWords.contains(word)) {
@@ -138,7 +211,7 @@ public class SentimentWordCount {
             if (key.toString().equals(POSITIVE)) {
                 positiveCount = count;
                 // System.out.println("POSITIVE count: " + count);
-                
+
             } else if (key.toString().equals(NEGATIVE)) {
                 negativeCount = count;
                 // System.out.println("NEGATIVE count: " + count);
@@ -147,10 +220,10 @@ public class SentimentWordCount {
             IntWritable output = new IntWritable(count);
             context.write(key, output);
         }
-        
+
         @Override
         protected void cleanup(Reducer<Text, IntWritable, Text, IntWritable>.Context context)
-        throws IOException, InterruptedException {
+                throws IOException, InterruptedException {
             // TODO Auto-generated method stub
             // System.out.println("CLEANUP");
             super.cleanup(context);
@@ -158,10 +231,10 @@ public class SentimentWordCount {
             double sentimentIndex = 0.0d;
             // System.out.println("POSITIVE count: " + positiveCount);
             // System.out.println("NEGATIVE count: " + negativeCount);
-            
+
             sentimentIndex = Math.round((positiveCount - negativeCount) * 100.0 / (positiveCount + negativeCount));
             // System.out.println("SI: " + sentimentIndex);
-            
+
             IntWritable output = new IntWritable((int) (sentimentIndex));
             context.write(keyWord, output);
         }
@@ -182,19 +255,20 @@ public class SentimentWordCount {
         }
 
         // if (otherArgs.length < 2) {
-        //     // System.err.println("* * * Needs more arguments....usage : WordCount
-        //     // <inputfile> <output folder> <good word list> <bad word list>");
-        //     System.err.println("* * * Needs more arguments....usage : WordCount <inputfile> <output folder>");
-        //     System.exit(2);
+        // // System.err.println("* * * Needs more arguments....usage : WordCount
+        // // <inputfile> <output folder> <good word list> <bad word list>");
+        // System.err.println("* * * Needs more arguments....usage : WordCount
+        // <inputfile> <output folder>");
+        // System.exit(2);
         // }
 
         // parsePositive(args[2]);
         // parseNegative(args[3]);
-        parsePositive("resources/pos-words.txt");
-        System.out.println("parsePositive done");
-        parseNegative("resources/neg-words.txt");
-        System.out.println("parseNegative done");
-        
+        // parsePositive("resources/pos-words.txt");
+        // System.out.println("parsePositive done");
+        // parseNegative("resources/neg-words.txt");
+        // System.out.println("parseNegative done");
+
         Job job = Job.getInstance(conf, WORD_COUNT);
         job.setJarByClass(SentimentWordCount.class);
 
@@ -202,23 +276,23 @@ public class SentimentWordCount {
         job.setReducerClass(SumReducer.class);
 
         job.setNumReduceTasks(1);
-        
+
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
-        
+
         job.setInputFormatClass(TextInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
-        
+
         String outputFolderName = createOutputFolderName(args[1]);
-        System.out.println("outputFolderName:"+outputFolderName);
+        System.out.println("outputFolderName:" + outputFolderName);
         FileOutputFormat.setOutputPath(job, new Path(outputFolderName));
         // FileOutputFormat.setOutputPath(job, new Path(args[1]));
-        
+
         System.out.println("before job start");
         boolean isSuccess_JobStatus = job.waitForCompletion(true); // submits the job
-        
+
         System.out.println("after job");
         if (isSuccess_JobStatus) {
             System.out.println(COMPLETED_THE_MAP_REDUCE_SUCCESSFULLY);
@@ -238,47 +312,4 @@ public class SentimentWordCount {
         }
         return folderName;
     }
-
-    // Parse the positive words to match and capture during Map phase.
-    private static void parsePositive(String goodWordsUri) {
-        try {
-            URL url = SentimentWordCount.class.getResource(goodWordsUri);
-            File file = new File(url.getPath());
-            BufferedReader fis = new BufferedReader(new FileReader(file));
-            String goodWord;
-            while ((goodWord = fis.readLine()) != null) {
-                goodWords.add(goodWord);
-            }
-            fis.close();
-        } catch (IOException ioe) {
-            System.err.println("Caught exception parsing cached file '" + goodWords + "' : "
-                    + StringUtils.stringifyException(ioe));
-        }
-    }
-
-    // Parse the negative words to match and capture during Reduce phase.
-    private static void parseNegative(String badWordsUri) {
-        try {
-            URL url = SentimentWordCount.class.getResource(badWordsUri);
-            File file = new File(url.getPath());
-            BufferedReader fis = new BufferedReader(new FileReader(file));
-            String badWord;
-            while ((badWord = fis.readLine()) != null) {
-                badWords.add(badWord);
-            }
-            fis.close();
-        } catch (IOException ioe) {
-            System.err.println("Caught exception while parsing cached file '" + badWords + "' : "
-                    + StringUtils.stringifyException(ioe));
-        }
-    }
-
-    /**
-     *
-     */
-    private static final String NEGATIVE = "negative";
-    /**
-     *
-     */
-    private static final String SI = "SI";
 }

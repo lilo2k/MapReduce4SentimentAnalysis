@@ -19,12 +19,12 @@
   </properties>
 
   <dependencies>
-    <!-- <dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.11</version>
       <scope>test</scope>
-    </dependency> -->
+    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client</artifactId>
@@ -38,7 +38,13 @@
     <resources>
       <resource>
         <directory>src/main/resources</directory>
-    </resource>
+      </resource>
+      <resource>
+        <directory>src/main/java</directory>
+            <includes>
+                <include>**/*.txt</include>
+            </includes>
+      </resource>
     </resources>
     <plugins>
       <plugin>
