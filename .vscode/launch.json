@@ -16,7 +16,7 @@
         },
         {
             "type": "java",
-            "name": "Sentiment-sahkespeare",
+            "name": "Sentiment-shakespeare",
             "request": "launch",
             "mainClass": "myproject.SentimentWordCount",
             "args": "./shakespeare/histories.txt output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
@@ -26,7 +26,7 @@
             "name": "sentiment-twitter",
             "request": "launch",
             "mainClass": "myproject.SentimentWordCount",
-            "args": "./input/twitter.csv output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
+            "args": "./twitter/twitter-large1.csv output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
         }
     ]
 }

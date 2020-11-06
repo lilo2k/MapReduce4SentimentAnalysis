@@ -23,11 +23,11 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Logger;
+// import org.apache.log4j.BasicConfigurator;
+// import org.apache.log4j.Logger;
 
 public class SentimentWordCount {
-    private static final Logger LOG = Logger.getLogger(SentimentWordCount.class);
+    // private static final Logger LOG = Logger.getLogger(SentimentWordCount.class);
     /**
      *
      */
@@ -54,6 +54,8 @@ public class SentimentWordCount {
     private static Set<String> goodWords = new HashSet<String>();
     private static Set<String> badWords = new HashSet<String>();
 
+    private static final String POSITIVE = "positive";
+    
     // map
     // Object = Input Key, Text = input Value, Text = Output of Map Process,
     // IntWritable = Output Value = 1 Always <in this case> 1 . for each word
@@ -64,6 +66,10 @@ public class SentimentWordCount {
         //         throws IOException, InterruptedException {
         //     super.setup(context);
         // }
+
+        /**
+         *
+         */
 
         @Override
         // we are getting a line of text at a time as input
@@ -90,18 +96,18 @@ public class SentimentWordCount {
                 // Filter and count "good" words.
                 if (goodWords.contains(word)) {
                     // context.getCounter(Gauge.POSITIVE).increment(1);
-                    System.out.println(word);
-                    LOG.info("Word: " + word);
-                    keyWord.set("positive");
+                    // System.out.println(word);
+                    // LOG.info("Word: " + word);
+                    keyWord.set(POSITIVE);
                     context.write(keyWord, valueOne);
                 }
 
                 // Filter and count "bad" words.
                 if (badWords.contains(word)) {
                     // context.getCounter(Gauge.NEGATIVE).increment(1);
-                    System.out.println(word);
-                    LOG.info("Word: " + word);
-                    keyWord.set("negative");
+                    // System.out.println(word);
+                    // LOG.info("Word: " + word);
+                    keyWord.set(NEGATIVE);
                     context.write(keyWord, valueOne);
                 }
             }
@@ -111,30 +117,56 @@ public class SentimentWordCount {
     // reduce
     // The input of the reducer is the output of the mapper.
     public static class SumReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+        private static int positiveCount = 0;
+        private static int negativeCount = 0;
 
         // System automatically shuffle-sorts, and gives a iterable list as value to
         // this reducer function.
         // e.g. ("hello",1,1,1,1) hello is key, and 1,1,1,1 is iterable list
-        public void reduce(Text term, Iterable<IntWritable> listOfOnes, Context context)
+        public void reduce(Text key, Iterable<IntWritable> listOfOnes, Context context)
                 throws IOException, InterruptedException {
             int count = 0;
 
             for (IntWritable valueOne : listOfOnes) {
                 count++;
             }
+            if (key.toString().equals(POSITIVE)) {
+                positiveCount = count;
+            }
+            else if (key.toString().equals(NEGATIVE)) {
+                negativeCount = count;
+            }
             IntWritable output = new IntWritable(count);
-            context.write(term, output);
+            context.write(key, output);
+        }
+
+        @Override
+        protected void cleanup(Reducer<Text, IntWritable, Text, IntWritable>.Context context)
+                throws IOException, InterruptedException {
+            // TODO Auto-generated method stub
+            super.cleanup(context);
+            Text keyWord = new Text(SentimentWordCount.SI);
+            double sentimentIndex = 0.0d;
+            
+            sentimentIndex = Math.round((positiveCount-negativeCount)*100.0/(positiveCount+negativeCount));
+
+            IntWritable output = new IntWritable((int) (sentimentIndex));
+            context.write(keyWord, output);
         }
     }
 
     // main
     public static void main(String... args) throws IOException, ClassNotFoundException, InterruptedException {
         // System.out.println( "Hello World!" );
-        BasicConfigurator.configure();
+        // BasicConfigurator.configure();
         
         Configuration conf = new Configuration();
 
         String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+
+        for (String arg : otherArgs) {
+            System.out.println("arg: " + arg);
+        }
 
         if (otherArgs.length != 4) {
         System.err.println("* * * Needs more arguments....usage : WordCount <inputfile> <output folder> <good word list> <bad word list>");
@@ -150,7 +182,7 @@ public class SentimentWordCount {
         job.setMapperClass(TokenizeMapper.class);
         job.setReducerClass(SumReducer.class);
 
-        job.setNumReduceTasks(2);
+        job.setNumReduceTasks(1);
 
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
@@ -214,4 +246,13 @@ public class SentimentWordCount {
                     + StringUtils.stringifyException(ioe));
         }
     }
+
+	/**
+	 *
+	 */
+	private static final String NEGATIVE = "negative";
+	/**
+	 *
+	 */
+	private static final String SI = "SI";
 }
