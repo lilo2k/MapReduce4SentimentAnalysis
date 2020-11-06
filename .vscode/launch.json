@@ -5,7 +5,7 @@
             "name": "Word count",
             "request": "launch",
             "mainClass": "myproject.WordCount",
-            "args": "./wordlist/pos-words.txt output test1 test2"
+            "args": "./input/input.txt output"
         },
         {
             "type": "java",
@@ -16,17 +16,24 @@
         },
         {
             "type": "java",
-            "name": "Sentiment-shakespeare",
+            "name": "Sentiment - small",
             "request": "launch",
             "mainClass": "myproject.SentimentWordCount",
-            "args": "./shakespeare/histories.txt output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
+            "args": "./input/twitter.csv output"
         },
         {
             "type": "java",
-            "name": "sentiment-twitter",
+            "name": "sentiment large",
             "request": "launch",
             "mainClass": "myproject.SentimentWordCount",
-            "args": "./twitter/twitter-large1.csv output ./wordlist/pos-words.txt ./wordlist/neg-words.txt"
+            "args": "./twitter/twitter-large1.csv output"
+        },
+        {
+            "type": "java",
+            "name": "sentiment multiple files",
+            "request": "launch",
+            "mainClass": "myproject.SentimentWordCount",
+            "args": "./twitter output"
         }
     ]
 }

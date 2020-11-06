@@ -56,7 +56,7 @@ public class SentimentWordCount {
     private static Set<String> badWords = new HashSet<String>();
 
     private static final String POSITIVE = "positive";
-    
+
     // map
     // Object = Input Key, Text = input Value, Text = Output of Map Process,
     // IntWritable = Output Value = 1 Always <in this case> 1 . for each word
@@ -64,8 +64,8 @@ public class SentimentWordCount {
 
         // @Override
         // protected void setup(Mapper<Object, Text, Text, IntWritable>.Context context)
-        //         throws IOException, InterruptedException {
-        //     super.setup(context);
+        // throws IOException, InterruptedException {
+        // super.setup(context);
         // }
 
         /**
@@ -76,12 +76,14 @@ public class SentimentWordCount {
         // we are getting a line of text at a time as input
         // context is the way in which the key-value pairs is spit out.
         public void map(Object inputKey, Text inputValue, Context context) throws IOException, InterruptedException {
+            // System.out.println("MAP");
 
             // pick up lines related to the BRAND
             if (!Pattern.compile(Pattern.quote(BRAND), Pattern.CASE_INSENSITIVE).matcher(inputValue.toString())
                     .find()) {
                 return;
             }
+            // System.out.println("Found: " + BRAND + " in " + inputValue);
 
             IntWritable valueOne = new IntWritable(1);
 
@@ -91,14 +93,15 @@ public class SentimentWordCount {
 
             while (stringTokenizer.hasMoreTokens()) {
                 // removes all non alphabets, and any special characters
-                // keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET, ""));
-                String word = stringTokenizer.nextToken().toLowerCase();//.replaceAll(NON_ALPHABET, "");
+                // keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET,
+                // ""));
+                String word = stringTokenizer.nextToken().toLowerCase();// .replaceAll(NON_ALPHABET, "");
 
                 // Filter and count "good" words.
                 if (goodWords.contains(word)) {
                     // context.getCounter(Gauge.POSITIVE).increment(1);
                     // System.out.println(word);
-                    // LOG.info("Word: " + word);
+                    // System.out.println("Word: " + word);
                     keyWord.set(POSITIVE);
                     context.write(keyWord, valueOne);
                 }
@@ -107,7 +110,7 @@ public class SentimentWordCount {
                 if (badWords.contains(word)) {
                     // context.getCounter(Gauge.NEGATIVE).increment(1);
                     // System.out.println(word);
-                    // LOG.info("Word: " + word);
+                    // System.out.println("Word: " + word);
                     keyWord.set(NEGATIVE);
                     context.write(keyWord, valueOne);
                 }
@@ -126,6 +129,7 @@ public class SentimentWordCount {
         // e.g. ("hello",1,1,1,1) hello is key, and 1,1,1,1 is iterable list
         public void reduce(Text key, Iterable<IntWritable> listOfOnes, Context context)
                 throws IOException, InterruptedException {
+            // System.out.println("REDUCE");
             int count = 0;
 
             for (IntWritable valueOne : listOfOnes) {
@@ -133,24 +137,31 @@ public class SentimentWordCount {
             }
             if (key.toString().equals(POSITIVE)) {
                 positiveCount = count;
-            }
-            else if (key.toString().equals(NEGATIVE)) {
+                // System.out.println("POSITIVE count: " + count);
+                
+            } else if (key.toString().equals(NEGATIVE)) {
                 negativeCount = count;
+                // System.out.println("NEGATIVE count: " + count);
             }
+            // System.out.println("Key: " + key.toString());
             IntWritable output = new IntWritable(count);
             context.write(key, output);
         }
-
+        
         @Override
         protected void cleanup(Reducer<Text, IntWritable, Text, IntWritable>.Context context)
-                throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
             // TODO Auto-generated method stub
+            // System.out.println("CLEANUP");
             super.cleanup(context);
             Text keyWord = new Text(SentimentWordCount.SI);
             double sentimentIndex = 0.0d;
+            // System.out.println("POSITIVE count: " + positiveCount);
+            // System.out.println("NEGATIVE count: " + negativeCount);
             
-            sentimentIndex = Math.round((positiveCount-negativeCount)*100.0/(positiveCount+negativeCount));
-
+            sentimentIndex = Math.round((positiveCount - negativeCount) * 100.0 / (positiveCount + negativeCount));
+            // System.out.println("SI: " + sentimentIndex);
+            
             IntWritable output = new IntWritable((int) (sentimentIndex));
             context.write(keyWord, output);
         }
@@ -160,25 +171,30 @@ public class SentimentWordCount {
     public static void main(String... args) throws IOException, ClassNotFoundException, InterruptedException {
         // System.out.println( "Hello World!" );
         // BasicConfigurator.configure();
-        
+
         Configuration conf = new Configuration();
 
         String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
 
         for (String arg : otherArgs) {
+            // System.out.println("arg: " + arg);
             System.out.println("arg: " + arg);
         }
 
-        if (otherArgs.length != 4) {
-        System.err.println("* * * Needs more arguments....usage : WordCount <inputfile> <output folder> <good word list> <bad word list>");
-        System.exit(2);
-        }
+        // if (otherArgs.length < 2) {
+        //     // System.err.println("* * * Needs more arguments....usage : WordCount
+        //     // <inputfile> <output folder> <good word list> <bad word list>");
+        //     System.err.println("* * * Needs more arguments....usage : WordCount <inputfile> <output folder>");
+        //     System.exit(2);
+        // }
 
         // parsePositive(args[2]);
         // parseNegative(args[3]);
-        parsePositive("pos-words.txt");
-        parseNegative("neg-words.txt");
-
+        parsePositive("resources/pos-words.txt");
+        System.out.println("parsePositive done");
+        parseNegative("resources/neg-words.txt");
+        System.out.println("parseNegative done");
+        
         Job job = Job.getInstance(conf, WORD_COUNT);
         job.setJarByClass(SentimentWordCount.class);
 
@@ -186,31 +202,32 @@ public class SentimentWordCount {
         job.setReducerClass(SumReducer.class);
 
         job.setNumReduceTasks(1);
-
+        
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
-
+        
         job.setInputFormatClass(TextInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
-
+        
         String outputFolderName = createOutputFolderName(args[1]);
+        System.out.println("outputFolderName:"+outputFolderName);
         FileOutputFormat.setOutputPath(job, new Path(outputFolderName));
         // FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
+        
+        System.out.println("before job start");
         boolean isSuccess_JobStatus = job.waitForCompletion(true); // submits the job
-
+        
+        System.out.println("after job");
         if (isSuccess_JobStatus) {
-            System.exit(0); // Exit with Success code
             System.out.println(COMPLETED_THE_MAP_REDUCE_SUCCESSFULLY);
+            System.exit(0); // Exit with Success code
         } else {
-            System.exit(1); // Exit with Failure code # 1
             System.out.println(EXITED_WITH_ERRORS);
+            System.exit(1); // Exit with Failure code # 1
         }
-
         System.out.println(COMPLETED_THE_MAP_REDUCE);
-
     }
 
     private static String createOutputFolderName(String folderName) {
@@ -232,6 +249,7 @@ public class SentimentWordCount {
             while ((goodWord = fis.readLine()) != null) {
                 goodWords.add(goodWord);
             }
+            fis.close();
         } catch (IOException ioe) {
             System.err.println("Caught exception parsing cached file '" + goodWords + "' : "
                     + StringUtils.stringifyException(ioe));
@@ -248,18 +266,19 @@ public class SentimentWordCount {
             while ((badWord = fis.readLine()) != null) {
                 badWords.add(badWord);
             }
+            fis.close();
         } catch (IOException ioe) {
             System.err.println("Caught exception while parsing cached file '" + badWords + "' : "
                     + StringUtils.stringifyException(ioe));
         }
     }
 
-	/**
-	 *
-	 */
-	private static final String NEGATIVE = "negative";
-	/**
-	 *
-	 */
-	private static final String SI = "SI";
+    /**
+     *
+     */
+    private static final String NEGATIVE = "negative";
+    /**
+     *
+     */
+    private static final String SI = "SI";
 }
