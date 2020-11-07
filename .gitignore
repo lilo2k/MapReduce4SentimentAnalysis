@@ -28,6 +28,7 @@ output*/
 # out-AWS/
 Harvard/
 Sentiment140/
+dataset/
 
 twitter-large.txt
 twitter-large.csv

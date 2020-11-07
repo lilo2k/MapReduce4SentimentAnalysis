@@ -169,7 +169,7 @@ public class SentimentWordCount {
                 // stringTokenizer.nextToken();
                 // stringTokenizer.nextToken();
             }
-            String dateKey = new SimpleDateFormat("yyyyMM").format(date); 
+            String dateKey = new SimpleDateFormat("yyyyMMdd").format(date); 
 
             // removes all non alphabets, and any special characters
             // keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET,""));
