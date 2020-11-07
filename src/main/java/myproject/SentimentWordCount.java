@@ -254,8 +254,8 @@ public class SentimentWordCount {
             // System.out.println("Key: " + key.toString());
 
             // Skip writing if the keys are YYYYMM style
-            IntWritable output = new IntWritable(count);
-            context.write(key, output);
+            // IntWritable output = new IntWritable(count);
+            // context.write(key, output);
         }
 
         @Override
