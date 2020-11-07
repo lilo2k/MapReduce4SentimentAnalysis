@@ -25,7 +25,7 @@ hs_err_pid*
 
 target/
 output*/
-out-AWS/
+# out-AWS/
 Harvard/
 Sentiment140/
 
