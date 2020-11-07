@@ -27,5 +27,6 @@ target/
 output*/
 out-AWS/
 Harvard/
+Sentiment140/
 
 twitter-large.csv

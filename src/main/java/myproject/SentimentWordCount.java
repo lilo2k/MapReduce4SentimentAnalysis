@@ -52,7 +52,8 @@ public class SentimentWordCount {
      */
     private static final String NON_ALPHABET = "[^a-zA-Z]";
 
-    private static final String BRAND = "mcdonalds";
+    // private static final String BRAND = "mcdonald\'?s";
+    private static final String BRAND = "starbucks";
 
     private static final String POSITIVE = "positive";
     /**
@@ -70,6 +71,31 @@ public class SentimentWordCount {
     public static class TokenizeMapper extends Mapper<Object, Text, Text, IntWritable> {
         private static Set<String> goodWords = new HashSet<String>();
         private static Set<String> badWords = new HashSet<String>();
+
+        /**
+             * Emoticon
+             */
+        private static String positiveEmoticons =  
+            "\\Q:)\\E|\\Q:]\\E|\\Q:}\\E|\\Q:o)\\E|\\Q:o]\\E|\\Q:o}\\E"
+            +"|\\Q:-]\\E|\\Q:-)\\E|\\Q:-}\\E|\\Q=)\\E|\\Q=]\\E|\\Q=}\\E"
+            +"|\\Q=^]\\E|\\Q=^)\\E|\\Q=^}\\E|\\Q:B\\E|\\Q:-D\\E|\\Q:-B\\E"
+            +"|\\Q:^D\\E|\\Q:^B\\E|\\Q=B\\E|\\Q=^B\\E|\\Q=^D\\E|\\Q:’)\\E"
+            +"|\\Q:’]\\E|\\Q:’}\\E|\\Q=’)\\E|\\Q=’]\\E|\\Q=’}\\E|\\Q<3\\E"
+            +"|\\Q^.^\\E|\\Q^-^\\E|\\Q^_^\\E|\\Q^^\\E|\\Q:*\\E|\\Q=*\\E"
+            +"|\\Q:-*\\E|\\Q;)\\E|\\Q;]\\E|\\Q;}\\E|\\Q:-p\\E|\\Q:-P\\E"
+            +"|\\Q:-b\\E|\\Q:^p\\E|\\Q:^P\\E|\\Q:^b\\E|\\Q=P\\E"
+            +"|\\Q=p\\E|\\Q\\o\\\\E|\\Q/o/\\E|\\Q:P\\E|\\Q:p\\E|\\Q:b\\E|\\Q=b\\E"
+            +"|\\Q=^p\\E|\\Q=^P\\E|\\Q=^b\\E|\\Q\\o/\\E"
+            ;
+        private static String negativeEmoticons = "\\Q:|\\E|\\Q=|\\E|\\Q:-|\\E|\\Q>.<\\E|\\Q><\\E|\\Q>_<\\E|\\Q:o\\E"
+            // +"|\\Q:0\\E"
+            +"|\\Q=O\\E|\\Q:@\\E"
+            +"|\\Q=@\\E|\\Q:^o\\E|\\Q:^@\\E|\\Q-.-\\E"
+            +"|\\Q-.-’\\E|\\Q-_-\\E|\\Q-_-’\\E"
+            +"|\\Q:x\\E|\\Q=X\\E|\\Q:#\\E"
+            +"|\\Q=#\\E|\\Q:-x\\E|\\Q:-@\\E"
+            +"|\\Q:-#\\E|\\Q:^x\\E|\\Q:^#\\E"
+            ;
 
         @Override
         protected void setup(Mapper<Object, Text, Text, IntWritable>.Context context)
@@ -142,36 +168,47 @@ public class SentimentWordCount {
         /**
          *
          */
-
         @Override
         // we are getting a line of text at a time as input
         // context is the way in which the key-value pairs is spit out.
-        public void map(Object inputKey, Text inputValue, Context context) throws IOException, InterruptedException {
+        public void map(Object inputKey, Text inputText, Context context) throws IOException, InterruptedException {
             // System.out.println("MAP");
 
-            // pick up lines related to the BRAND
-            if (!Pattern.compile(Pattern.quote(BRAND), Pattern.CASE_INSENSITIVE).matcher(inputValue.toString())
-                    .find()) {
+            String inputString = inputText.toString();
+            
+            // Opt out lines not related to the BRAND
+            if (!Pattern.compile(BRAND, Pattern.CASE_INSENSITIVE ).matcher(inputString).find()) {
                 return;
             }
             // System.out.println("Found: " + BRAND + " in " + inputValue);
 
             IntWritable valueOne = new IntWritable(1);
-
-            StringTokenizer stringTokenizer = new StringTokenizer(inputValue.toString());
-
             Text keyWord = new Text();
+            
+            
+            StringTokenizer stringTokenizer = new StringTokenizer(inputString);
 
+            // "4","2071031926","Sun Jun 07 18:43:04 PDT 2009","NO_QUERY","zoeeeyeeee","Getting sushi with @nicurnmama "
             while (stringTokenizer.hasMoreTokens()) {
                 // removes all non alphabets, and any special characters
-
+                
                 // keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET,"") + goodWords.size());
                 // context.write(keyWord, valueOne);
-
-                String word = stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET, "");
+                
+                String word = stringTokenizer.nextToken().toLowerCase();//.replaceAll(NON_ALPHABET, "");
+                
+                if (Pattern.compile(positiveEmoticons).matcher(word).find()) {
+                    keyWord.set(POSITIVE);
+                    context.write(keyWord, valueOne);
+                }
+    
+                if (Pattern.compile(negativeEmoticons).matcher(word).find()) {
+                    keyWord.set(NEGATIVE);
+                    context.write(keyWord, valueOne);
+                }
 
                 // Filter and count "good" words.
-                if (goodWords.contains(word)) {
+                if (goodWords.contains(word.replaceAll(NON_ALPHABET, ""))) {
                     // context.getCounter(Gauge.POSITIVE).increment(1);
                     // System.out.println(word);
                     // System.out.println("Word: " + word);
@@ -180,7 +217,7 @@ public class SentimentWordCount {
                 }
 
                 // Filter and count "bad" words.
-                if (badWords.contains(word)) {
+                if (badWords.contains(word.replaceAll(NON_ALPHABET, ""))) {
                     // context.getCounter(Gauge.NEGATIVE).increment(1);
                     // System.out.println(word);
                     // System.out.println("Word: " + word);
