@@ -8,7 +8,9 @@ import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
@@ -152,8 +154,9 @@ public class SentimentWordCount {
             if (matcher.find()) { //} stringTokenizer.countTokens() >= 6) {
                 // String a = matcher.group();// stringTokenizer.nextToken();
                 // String b = stringTokenizer.nextToken();
-                matcher.find();matcher.find();
-                String dateString = matcher.group();//stringTokenizer.nextToken().replaceAll("^\"+|\"+$", "");
+                matcher.find();
+                matcher.find();
+                String dateString = matcher.group().replaceAll("^\"+|\"+$", "");//stringTokenizer.nextToken().replaceAll("^\"+|\"+$", "");
                 try {
                     date = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy").parse(dateString); //SLOW
                 } catch (ParseException e) {
@@ -161,17 +164,18 @@ public class SentimentWordCount {
                     e.printStackTrace();
                     return;
                 }
-                stringTokenizer.nextToken();
-                stringTokenizer.nextToken();
-            } 
+                matcher.find();
+                matcher.find();
+                // stringTokenizer.nextToken();
+                // stringTokenizer.nextToken();
+            }
             String dateKey = new SimpleDateFormat("yyyyMM").format(date); 
 
-            
             // removes all non alphabets, and any special characters
             // keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET,""));
             // context.write(keyWord, valueOne);
-            
-            String message = stringTokenizer.nextToken().toLowerCase().replaceAll("^\"+|\"+$", "");//.replaceAll(NON_ALPHABET, "");
+            matcher.find();
+            String message = matcher.group().replaceAll("^\"+|\"+$", ""); //nextToken().toLowerCase().replaceAll("^\"+|\"+$", "");//.replaceAll(NON_ALPHABET, "");
             stringTokenizer = new StringTokenizer(message);
             
             while (stringTokenizer.hasMoreTokens()) {
@@ -212,8 +216,11 @@ public class SentimentWordCount {
     // reduce
     // The input of the reducer is the output of the mapper.
     public static class SumReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
-        private static int positiveCount = 0;
-        private static int negativeCount = 0;
+        // private static int positiveCount = 0;
+        // private static int negativeCount = 0;
+
+        private static HashMap<String, Integer> positiveMap = new HashMap<String, Integer>();
+        private static HashMap<String, Integer> negativeMap = new HashMap<String, Integer>();
 
         // System automatically shuffle-sorts, and gives a iterable list as value to
         // this reducer function.
@@ -225,12 +232,23 @@ public class SentimentWordCount {
             for (IntWritable valueOne : listOfOnes) {
                 count++;
             }
-            if (key.toString().equals(POSITIVE)) {
-                positiveCount = count;
+            if (key.toString().startsWith(POSITIVE)) {
+                String newKey = key.toString().replaceFirst(POSITIVE, "");
+                positiveMap.put(newKey,count);
+                if (negativeMap.get(newKey) == null) {
+                    negativeMap.put(newKey, 0);
+                }
+                // positiveCount = count;
                 // System.out.println("POSITIVE count: " + count);
-
-            } else if (key.toString().equals(NEGATIVE)) {
-                negativeCount = count;
+                
+            } else if (key.toString().startsWith(NEGATIVE)) {
+                String newKey = key.toString().replaceFirst(NEGATIVE, "");
+                // negativeMap.put(key.toString().replaceFirst(NEGATIVE, ""),count);
+                negativeMap.put(newKey,count);
+                if (positiveMap.get(newKey) == null) {
+                    positiveMap.put(newKey, 0);
+                }
+                // negativeCount = count;
                 // System.out.println("NEGATIVE count: " + count);
             }
             // System.out.println("Key: " + key.toString());
@@ -246,16 +264,22 @@ public class SentimentWordCount {
             // TODO Auto-generated method stub
             // System.out.println("CLEANUP");
             super.cleanup(context);
-            Text keyWord = new Text(SentimentWordCount.SI);
+            // Text keyWord = new Text(SentimentWordCount.SI);
             double sentimentIndex = 0.0d;
             // System.out.println("POSITIVE count: " + positiveCount);
             // System.out.println("NEGATIVE count: " + negativeCount);
-
-            sentimentIndex = Math.round((positiveCount - negativeCount) * 100.0 / (positiveCount + negativeCount));
-            // System.out.println("SI: " + sentimentIndex);
-
-            IntWritable output = new IntWritable((int) (sentimentIndex));
-            context.write(keyWord, output);
+            
+            for (Map.Entry<String, Integer> entry : positiveMap.entrySet()) {
+                int positiveCount = entry.getValue();
+                int negativeCount = negativeMap.get(entry.getKey());
+                
+                sentimentIndex = Math.round((positiveCount - negativeCount) * 100.0 / (positiveCount + negativeCount));
+                // System.out.println("SI: " + sentimentIndex);
+                
+                Text keyWord = new Text(entry.getKey());
+                IntWritable output = new IntWritable((int) (sentimentIndex));
+                context.write(keyWord, output);
+            }
         }
     }
 
