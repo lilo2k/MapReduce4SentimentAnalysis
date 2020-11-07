@@ -5,9 +5,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
@@ -68,29 +72,22 @@ public class SentimentWordCount {
         private static Set<String> badWords = new HashSet<String>();
 
         /**
-             * Emoticon
-             */
-        private static String positiveEmoticons =  
-            "\\Q:)\\E|\\Q:]\\E|\\Q:}\\E|\\Q:o)\\E|\\Q:o]\\E|\\Q:o}\\E"
-            +"|\\Q:-]\\E|\\Q:-)\\E|\\Q:-}\\E|\\Q=)\\E|\\Q=]\\E|\\Q=}\\E"
-            +"|\\Q=^]\\E|\\Q=^)\\E|\\Q=^}\\E|\\Q:B\\E|\\Q:-D\\E|\\Q:-B\\E"
-            +"|\\Q:^D\\E|\\Q:^B\\E|\\Q=B\\E|\\Q=^B\\E|\\Q=^D\\E|\\Q:’)\\E"
-            +"|\\Q:’]\\E|\\Q:’}\\E|\\Q=’)\\E|\\Q=’]\\E|\\Q=’}\\E|\\Q<3\\E"
-            +"|\\Q^.^\\E|\\Q^-^\\E|\\Q^_^\\E|\\Q^^\\E|\\Q:*\\E|\\Q=*\\E"
-            +"|\\Q:-*\\E|\\Q;)\\E|\\Q;]\\E|\\Q;}\\E|\\Q:-p\\E|\\Q:-P\\E"
-            +"|\\Q:-b\\E|\\Q:^p\\E|\\Q:^P\\E|\\Q:^b\\E|\\Q=P\\E"
-            +"|\\Q=p\\E|\\Q\\o\\\\E|\\Q/o/\\E|\\Q:P\\E|\\Q:p\\E|\\Q:b\\E|\\Q=b\\E"
-            +"|\\Q=^p\\E|\\Q=^P\\E|\\Q=^b\\E|\\Q\\o/\\E"
-            ;
+         * Emoticon
+         */
+        private static String positiveEmoticons = "\\Q:)\\E|\\Q:]\\E|\\Q:}\\E|\\Q:o)\\E|\\Q:o]\\E|\\Q:o}\\E"
+                + "|\\Q:-]\\E|\\Q:-)\\E|\\Q:-}\\E|\\Q=)\\E|\\Q=]\\E|\\Q=}\\E"
+                + "|\\Q=^]\\E|\\Q=^)\\E|\\Q=^}\\E|\\Q:B\\E|\\Q:-D\\E|\\Q:-B\\E"
+                + "|\\Q:^D\\E|\\Q:^B\\E|\\Q=B\\E|\\Q=^B\\E|\\Q=^D\\E|\\Q:’)\\E"
+                + "|\\Q:’]\\E|\\Q:’}\\E|\\Q=’)\\E|\\Q=’]\\E|\\Q=’}\\E|\\Q<3\\E"
+                + "|\\Q^.^\\E|\\Q^-^\\E|\\Q^_^\\E|\\Q^^\\E|\\Q:*\\E|\\Q=*\\E"
+                + "|\\Q:-*\\E|\\Q;)\\E|\\Q;]\\E|\\Q;}\\E|\\Q:-p\\E|\\Q:-P\\E"
+                + "|\\Q:-b\\E|\\Q:^p\\E|\\Q:^P\\E|\\Q:^b\\E|\\Q=P\\E"
+                + "|\\Q=p\\E|\\Q\\o\\\\E|\\Q/o/\\E|\\Q:P\\E|\\Q:p\\E|\\Q:b\\E|\\Q=b\\E"
+                + "|\\Q=^p\\E|\\Q=^P\\E|\\Q=^b\\E|\\Q\\o/\\E";
         private static String negativeEmoticons = "\\Q:|\\E|\\Q=|\\E|\\Q:-|\\E|\\Q>.<\\E|\\Q><\\E|\\Q>_<\\E|\\Q:o\\E"
-            // +"|\\Q:0\\E"
-            +"|\\Q=O\\E|\\Q:@\\E"
-            +"|\\Q=@\\E|\\Q:^o\\E|\\Q:^@\\E|\\Q-.-\\E"
-            +"|\\Q-.-’\\E|\\Q-_-\\E|\\Q-_-’\\E"
-            +"|\\Q:x\\E|\\Q=X\\E|\\Q:#\\E"
-            +"|\\Q=#\\E|\\Q:-x\\E|\\Q:-@\\E"
-            +"|\\Q:-#\\E|\\Q:^x\\E|\\Q:^#\\E"
-            ;
+                // +"|\\Q:0\\E"
+                + "|\\Q=O\\E|\\Q:@\\E" + "|\\Q=@\\E|\\Q:^o\\E|\\Q:^@\\E|\\Q-.-\\E" + "|\\Q-.-’\\E|\\Q-_-\\E|\\Q-_-’\\E"
+                + "|\\Q:x\\E|\\Q=X\\E|\\Q:#\\E" + "|\\Q=#\\E|\\Q:-x\\E|\\Q:-@\\E" + "|\\Q:-#\\E|\\Q:^x\\E|\\Q:^#\\E";
 
         @Override
         protected void setup(Mapper<Object, Text, Text, IntWritable>.Context context)
@@ -105,7 +102,7 @@ public class SentimentWordCount {
             // URL url = this.getClass().getClassLoader().getResource("pos-words.txt");
             // File file = new File(url.getPath());
 
-            InputStream in = getClass().getResourceAsStream("pos-words.txt"); 
+            InputStream in = getClass().getResourceAsStream("pos-words.txt");
             BufferedReader fis = new BufferedReader(new InputStreamReader(in));
             // BufferedReader fis = new BufferedReader(new FileReader(file));
             String goodWord;
@@ -114,7 +111,7 @@ public class SentimentWordCount {
             }
             fis.close();
 
-            in = getClass().getResourceAsStream("neg-words.txt"); 
+            in = getClass().getResourceAsStream("neg-words.txt");
             fis = new BufferedReader(new InputStreamReader(in));
             // url = this.getClass().getClassLoader().getResource("neg-words.txt");
             // file = new File(url.getPath());
@@ -136,53 +133,76 @@ public class SentimentWordCount {
             // System.out.println("MAP");
 
             String inputString = inputText.toString();
-            
+
             // Opt out lines not related to the BRAND
-            if (!Pattern.compile(BRAND, Pattern.CASE_INSENSITIVE ).matcher(inputString).find()) {
+            if (!Pattern.compile(BRAND, Pattern.CASE_INSENSITIVE).matcher(inputString).find()) {
                 return;
             }
             // System.out.println("Found: " + BRAND + " in " + inputValue);
 
             IntWritable valueOne = new IntWritable(1);
             Text keyWord = new Text();
-            
-            
-            StringTokenizer stringTokenizer = new StringTokenizer(inputString);
 
             // "4","2071031926","Sun Jun 07 18:43:04 PDT 2009","NO_QUERY","zoeeeyeeee","Getting sushi with @nicurnmama "
-            while (stringTokenizer.hasMoreTokens()) {
-                // removes all non alphabets, and any special characters
-                
-                // keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET,"") + goodWords.size());
-                // context.write(keyWord, valueOne);
-                
-                String word = stringTokenizer.nextToken().toLowerCase();//.replaceAll(NON_ALPHABET, "");
-                
-                if (Pattern.compile(positiveEmoticons).matcher(word).find()) {
-                    keyWord.set(POSITIVE);
-                    context.write(keyWord, valueOne);
+            StringTokenizer stringTokenizer = new StringTokenizer(inputString, "\"\",\"\"");
+
+            Matcher matcher = Pattern.compile("\"([^\"]*)\"").matcher(inputString);
+            
+            Date date = null;
+            if (matcher.find()) { //} stringTokenizer.countTokens() >= 6) {
+                // String a = matcher.group();// stringTokenizer.nextToken();
+                // String b = stringTokenizer.nextToken();
+                matcher.find();matcher.find();
+                String dateString = matcher.group();//stringTokenizer.nextToken().replaceAll("^\"+|\"+$", "");
+                try {
+                    date = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy").parse(dateString); //SLOW
+                } catch (ParseException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                    return;
                 }
-    
-                if (Pattern.compile(negativeEmoticons).matcher(word).find()) {
-                    keyWord.set(NEGATIVE);
+                stringTokenizer.nextToken();
+                stringTokenizer.nextToken();
+            } 
+            String dateKey = new SimpleDateFormat("yyyyMM").format(date); 
+
+            
+            // removes all non alphabets, and any special characters
+            // keyWord.set(stringTokenizer.nextToken().toLowerCase().replaceAll(NON_ALPHABET,""));
+            // context.write(keyWord, valueOne);
+            
+            String message = stringTokenizer.nextToken().toLowerCase().replaceAll("^\"+|\"+$", "");//.replaceAll(NON_ALPHABET, "");
+            stringTokenizer = new StringTokenizer(message);
+            
+            while (stringTokenizer.hasMoreTokens()) {
+                String word = stringTokenizer.nextToken().toLowerCase();//.replaceAll(NON_ALPHABET, "");
+                if (Pattern.compile(positiveEmoticons).matcher(word).find()) {
+                    keyWord.set(POSITIVE+dateKey);
                     context.write(keyWord, valueOne);
                 }
 
+                if (Pattern.compile(negativeEmoticons).matcher(word).find()) {
+                    keyWord.set(NEGATIVE+dateKey);
+                    context.write(keyWord, valueOne);
+                }
+
+                word = word.replaceAll(NON_ALPHABET, "");
+
                 // Filter and count "good" words.
-                if (goodWords.contains(word.replaceAll(NON_ALPHABET, ""))) {
+                if (goodWords.contains(word)) {
                     // context.getCounter(Gauge.POSITIVE).increment(1);
                     // System.out.println(word);
                     // System.out.println("Word: " + word);
-                    keyWord.set(POSITIVE);
+                    keyWord.set(POSITIVE+dateKey);
                     context.write(keyWord, valueOne);
                 }
 
                 // Filter and count "bad" words.
-                if (badWords.contains(word.replaceAll(NON_ALPHABET, ""))) {
+                if (badWords.contains(word)) {
                     // context.getCounter(Gauge.NEGATIVE).increment(1);
                     // System.out.println(word);
                     // System.out.println("Word: " + word);
-                    keyWord.set(NEGATIVE);
+                    keyWord.set(NEGATIVE+dateKey);
                     context.write(keyWord, valueOne);
                 }
             }
@@ -216,8 +236,8 @@ public class SentimentWordCount {
             // System.out.println("Key: " + key.toString());
 
             // Skip writing if the keys are YYYYMM style
-            // IntWritable output = new IntWritable(count);
-            // context.write(key, output);
+            IntWritable output = new IntWritable(count);
+            context.write(key, output);
         }
 
         @Override
