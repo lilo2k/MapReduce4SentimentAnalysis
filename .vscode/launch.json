@@ -26,7 +26,7 @@
             "name": "sentiment large",
             "request": "launch",
             "mainClass": "myproject.SentimentWordCount",
-            "args": "./twitter/twitter-large1.csv output"
+            "args": "./twitter/xaa.txt output"
         },
         {
             "type": "java",

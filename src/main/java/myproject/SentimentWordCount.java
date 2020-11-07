@@ -254,8 +254,10 @@ public class SentimentWordCount {
                 // System.out.println("NEGATIVE count: " + count);
             }
             // System.out.println("Key: " + key.toString());
-            IntWritable output = new IntWritable(count);
-            context.write(key, output);
+
+            // Skip writing if the keys are YYYYMM style
+            // IntWritable output = new IntWritable(count);
+            // context.write(key, output);
         }
 
         @Override
