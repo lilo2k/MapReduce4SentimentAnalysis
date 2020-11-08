@@ -194,18 +194,12 @@ public class SentimentWordCount {
 
                 // Filter and count "good" words.
                 if (goodWords.contains(word)) {
-                    // context.getCounter(Gauge.POSITIVE).increment(1);
-                    // System.out.println(word);
-                    // System.out.println("Word: " + word);
                     keyWord.set(POSITIVE+dateKey);
                     context.write(keyWord, valueOne);
                 }
 
                 // Filter and count "bad" words.
                 if (badWords.contains(word)) {
-                    // context.getCounter(Gauge.NEGATIVE).increment(1);
-                    // System.out.println(word);
-                    // System.out.println("Word: " + word);
                     keyWord.set(NEGATIVE+dateKey);
                     context.write(keyWord, valueOne);
                 }
