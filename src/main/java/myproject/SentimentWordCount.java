@@ -32,40 +32,17 @@ import org.apache.log4j.Logger;
 
 public class SentimentWordCount {
     private static final Logger LOG = Logger.getLogger(SentimentWordCount.class);
-    /**
-     *
-     */
     private static final String WORD_COUNT = "word count";
-    /**
-     *
-     */
     private static final String COMPLETED_THE_MAP_REDUCE = "Completed the Map Reduce";
-    /**
-     *
-     */
     private static final String EXITED_WITH_ERRORS = "Exited with Errors";
-    /**
-     *
-     */
     private static final String COMPLETED_THE_MAP_REDUCE_SUCCESSFULLY = "Completed the Map Reduce Successfully";
-    /**
-     *
-     */
     private static final String NON_ALPHABET = "[^a-zA-Z]";
-
+    private static final String POSITIVE = "positive";
+    private static final String NEGATIVE = "negative";
+    // private static final String SI = "SI";
     // private static final String BRAND = "mcdonald\'?s";
     private static final String BRAND = "starbucks";
-
-    private static final String POSITIVE = "positive";
-    /**
-    *
-    */
-    private static final String NEGATIVE = "negative";
-    /**
-     *
-     */
-    private static final String SI = "SI";
-
+    
     // map
     // Object = Input Key, Text = input Value, Text = Output of Map Process,
     // IntWritable = Output Value = 1 Always <in this case> 1 . for each word
